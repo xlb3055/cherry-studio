@@ -13,11 +13,20 @@ export function MarkdownHostProvider({
   copyRichContent,
   exportTableAsExcel,
   notifySuccess,
-  notifyError
+  notifyError,
+  resolveImageSrc
 }: MarkdownHostProviderProps) {
   const value = useMemo(
-    () => ({ openFilePath, openExternalUrl, copyRichContent, exportTableAsExcel, notifySuccess, notifyError }),
-    [openFilePath, openExternalUrl, copyRichContent, exportTableAsExcel, notifySuccess, notifyError]
+    () => ({
+      openFilePath,
+      openExternalUrl,
+      copyRichContent,
+      exportTableAsExcel,
+      notifySuccess,
+      notifyError,
+      resolveImageSrc
+    }),
+    [openFilePath, openExternalUrl, copyRichContent, exportTableAsExcel, notifySuccess, notifyError, resolveImageSrc]
   )
   return <MarkdownHostContext value={value}>{children}</MarkdownHostContext>
 }

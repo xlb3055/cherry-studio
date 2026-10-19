@@ -2,6 +2,7 @@ import type { Element, Root } from 'hast'
 import { visit } from 'unist-util-visit'
 
 export const FILE_LINK_MARKER_PROPERTY = 'dataMarkdownFileHref'
+export const FILE_IMAGE_MARKER_PROPERTY = 'dataMarkdownFileSrc'
 
 const URI_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 const WINDOWS_DRIVE_PATH_PATTERN = /^[a-z]:[/\\]/i
@@ -34,12 +35,21 @@ export function rehypePrepareFileLinks() {
   return (tree: Root): void => {
     visit(tree, 'element', (node: Element) => {
       delete node.properties[FILE_LINK_MARKER_PROPERTY]
+      delete node.properties[FILE_IMAGE_MARKER_PROPERTY]
 
       if (node.tagName === 'a' && typeof node.properties.href === 'string') {
         if (node.properties.href.startsWith('//')) node.properties.href = `https:${node.properties.href}`
       }
-      if (node.tagName === 'img' && typeof node.properties.src === 'string' && node.properties.src.startsWith('//')) {
-        node.properties.src = `https:${node.properties.src}`
+      if (node.tagName === 'img' && typeof node.properties.src === 'string') {
+        if (node.properties.src.startsWith('//')) node.properties.src = `https:${node.properties.src}`
+        // A relative or drive-form image is a local file, same class as a schemeless link.
+        // Leaving it as `img` lets harden's text-only image policy drop it, so park it as a
+        // span the way file links are parked, and restore the img after harden.
+        if (isFileLinkHref(node.properties.src)) {
+          node.tagName = 'span'
+          node.properties[FILE_IMAGE_MARKER_PROPERTY] = node.properties.src
+          delete node.properties.src
+        }
       }
       if (node.tagName !== 'a' || !isFileLinkHref(node.properties.href)) return
 
@@ -53,6 +63,13 @@ export function rehypePrepareFileLinks() {
 export function rehypeRestoreFileLinks() {
   return (tree: Root): void => {
     visit(tree, 'element', (node: Element) => {
+      const imageSrc = node.properties[FILE_IMAGE_MARKER_PROPERTY]
+      if (node.tagName === 'span' && typeof imageSrc === 'string') {
+        node.tagName = 'img'
+        node.properties.src = imageSrc
+        delete node.properties[FILE_IMAGE_MARKER_PROPERTY]
+      }
+
       const href = node.properties[FILE_LINK_MARKER_PROPERTY]
       if (node.tagName !== 'span' || typeof href !== 'string') return
 

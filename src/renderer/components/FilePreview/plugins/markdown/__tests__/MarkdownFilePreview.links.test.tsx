@@ -118,6 +118,47 @@ describe('MarkdownFilePreview links', () => {
     expect(openFile).toHaveBeenCalledWith('\\\\server\\share\\docs\\report.md')
   })
 
+  it('renders a relative image from the document directory without a workspace provider', async () => {
+    mocks.readText.mockResolvedValue('![Diagram](./images/diagram.png)')
+
+    render(
+      <MarkdownFilePreview
+        filePath={filePath}
+        fileName="DESIGN.md"
+        metadata={{ size: 128, modifiedAt: 1 }}
+        refreshKey={0}
+        type="file"
+      />
+    )
+
+    expect(await screen.findByRole('img', { name: 'Diagram' })).toHaveAttribute(
+      'src',
+      'file:///tmp/workspace/docs/images/diagram.png'
+    )
+  })
+
+  it('renders a relative image from the document directory', async () => {
+    mocks.readText.mockResolvedValue('![Diagram](./images/diagram.png)\n\n![Icon](images/图标（终）.svg)')
+
+    renderArtifactPreview(vi.fn())
+
+    const diagram = await screen.findByRole('img', { name: 'Diagram' })
+    const icon = await screen.findByRole('img', { name: 'Icon' })
+    expect(diagram).toHaveAttribute('src', 'file:///tmp/workspace/docs/images/diagram.png')
+    expect(icon.getAttribute('src')).toContain('file:///tmp/workspace/docs/images/')
+    expect(icon.getAttribute('src')).toContain('%EF%BC%88')
+  })
+
+  it('does not render a relative image that leaves the workspace', async () => {
+    mocks.readText.mockResolvedValue('![Secret](../../../../etc/passwd)')
+
+    renderArtifactPreview(vi.fn())
+
+    const secret = await screen.findByRole('img', { name: 'Secret' })
+    expect(secret).not.toHaveAttribute('src')
+    expect(secret.tagName).toBe('SPAN')
+  })
+
   it('keeps external links out of the local file opener', async () => {
     mocks.readText.mockResolvedValue('[Cherry Studio](https://cherry-ai.com)')
     const openFile = vi.fn()

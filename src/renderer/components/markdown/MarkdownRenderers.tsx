@@ -188,11 +188,22 @@ function MarkdownCodeRenderer({ children: rawChildren, className, node: _node }:
 export function MarkdownImageRenderer(props: MarkdownRendererProps<'img'>) {
   const { alt, node: _node, onError, src, style, ...imageProps } = props
   const [failedSource, setFailedSource] = useState<string | null>(null)
+  const { resolveImageSrc } = useMarkdownHost()
   void _node
+  // A host that resolves images owns local srcs. A refusal (null) must not fall back to the
+  // raw relative path: the preview document would then load it against its own origin.
+  const resolvedSrc = resolveImageSrc && src ? resolveImageSrc(src) : src
 
-  if (!src) return null
+  if (!resolvedSrc) {
+    if (!alt) return null
+    return (
+      <span role="img" aria-label={alt} className="text-muted-foreground text-sm">
+        {alt}
+      </span>
+    )
+  }
 
-  if (failedSource === src) {
+  if (failedSource === resolvedSrc) {
     if (!alt) return null
 
     return (
@@ -211,10 +222,10 @@ export function MarkdownImageRenderer(props: MarkdownRendererProps<'img'>) {
     <ImageViewer
       {...(imageProps as ImageViewerProps)}
       alt={alt}
-      src={src}
+      src={resolvedSrc}
       style={style ?? IMAGE_STYLE}
       onError={(event) => {
-        setFailedSource(src)
+        setFailedSource(resolvedSrc)
         onError?.(event)
       }}
     />

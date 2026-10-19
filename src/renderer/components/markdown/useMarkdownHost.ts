@@ -11,6 +11,11 @@ export interface MarkdownHost {
   notifyError?: (message: string) => void
   /** Opens a schemeless Markdown link as a local file in the owning surface. */
   openFilePath?: (path: string) => void | Promise<void>
+  /**
+   * Resolves a schemeless image `src` to a URL the renderer can load.
+   * Absent means local images stay unresolved — chat markdown must not read the filesystem.
+   */
+  resolveImageSrc?: (src: string) => string | null
 }
 
 export const MarkdownHostContext = createContext<MarkdownHost | null>(null)

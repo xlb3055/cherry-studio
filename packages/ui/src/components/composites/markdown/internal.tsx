@@ -28,6 +28,7 @@ import type { Pluggable } from 'unified'
 import { MarkdownBlockContext } from './context'
 import { rehypeHeadingIds, rehypePrefixSvgReferences, rehypePreserveAnchorTargets } from './plugins'
 import {
+  FILE_IMAGE_MARKER_PROPERTY,
   FILE_LINK_MARKER_PROPERTY,
   rehypePrepareFileLinks,
   rehypeRestoreFileLinks
@@ -178,7 +179,9 @@ export function MarkdownCore({
             span: [
               ...(extendedSchema.attributes?.span ?? []),
               ...(extendedSchema.attributes?.a ?? []),
-              FILE_LINK_MARKER_PROPERTY
+              ...(extendedSchema.attributes?.img ?? []),
+              FILE_LINK_MARKER_PROPERTY,
+              FILE_IMAGE_MARKER_PROPERTY
             ]
           }
         }

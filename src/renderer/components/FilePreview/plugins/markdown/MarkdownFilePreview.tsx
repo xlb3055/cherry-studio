@@ -11,6 +11,8 @@ import { MarkdownHostProvider, StaticMarkdown } from '@renderer/components/markd
 import { parseFileLinkHref } from '@renderer/utils/filePath'
 import { normalizeFilePreviewPath } from '@renderer/utils/filePreview'
 import { joinPath } from '@renderer/utils/path'
+
+import { markdownDocumentDirectory, resolveMarkdownPreviewImageSrc } from './markdownImageSource'
 import { type AbsoluteFilePath, AbsoluteFilePathSchema } from '@shared/types/file'
 
 import type { FilePreviewPluginProps } from '../../types'
@@ -84,6 +86,7 @@ function MarkdownPreviewEmpty() {
 }
 
 interface MarkdownPreviewContentProps {
+  documentPath: AbsoluteFilePath
   hideFrontmatter: boolean
   loadState: MarkdownFileLoadState
   markdownId: string
@@ -104,6 +107,7 @@ function resolveMarkdownFileLink(workspacePath: AbsoluteFilePath, href: string |
 }
 
 function MarkdownPreviewContent({
+  documentPath,
   hideFrontmatter,
   loadState,
   markdownId,
@@ -117,6 +121,13 @@ function MarkdownPreviewContent({
       if (target) return navigation.openFile(target)
     },
     [navigation]
+  )
+  // The file manager opens a preview with no workspace. Bound local images to the
+  // document directory there; an agent preview keeps the wider workspace root.
+  const imageRoot = navigation?.workspacePath ?? markdownDocumentDirectory(documentPath)
+  const resolveImageSrc = useCallback(
+    (src: string) => resolveMarkdownPreviewImageSrc(src, documentPath, imageRoot),
+    [documentPath, imageRoot]
   )
 
   if (loadState.status === 'loading') return <MarkdownPreviewLoading />
@@ -147,7 +158,11 @@ function MarkdownPreviewContent({
     </div>
   )
 
-  return navigation ? <MarkdownHostProvider openFilePath={openFilePath}>{markdown}</MarkdownHostProvider> : markdown
+  return (
+    <MarkdownHostProvider openFilePath={navigation ? openFilePath : undefined} resolveImageSrc={resolveImageSrc}>
+      {markdown}
+    </MarkdownHostProvider>
+  )
 }
 
 export default function MarkdownFilePreview({ filePath, metadata, refreshKey, type = 'file' }: FilePreviewPluginProps) {
@@ -189,6 +204,7 @@ export default function MarkdownFilePreview({ filePath, metadata, refreshKey, ty
       ) : null}
       <FilePreviewLayout.Content>
         <MarkdownPreviewContent
+          documentPath={filePath}
           hideFrontmatter={type === 'artifact'}
           loadState={loadState}
           markdownId={markdownId}

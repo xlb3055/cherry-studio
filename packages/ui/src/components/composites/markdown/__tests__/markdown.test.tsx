@@ -226,6 +226,25 @@ describe('Markdown (static)', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.example.com/image.png')
   })
 
+  it('preserves a relative image src so a file preview can resolve it', () => {
+    const { container } = render(
+      <Markdown
+        id="file-images"
+        preserveFileLinkHrefs
+        components={{
+          img: ({ alt, src }) => <img alt={alt} src={src} />
+        }}>
+        {'![Diagram](./images/diagram.png)\n\n![Remote](https://example.com/a.png)\n\n![Unsafe](javascript:alert(1))'}
+      </Markdown>
+    )
+
+    const images = container.querySelectorAll('img')
+    expect(images).toHaveLength(2)
+    expect(images[0].getAttribute('src')).toBe('./images/diagram.png')
+    expect(images[1].getAttribute('src')).toBe('https://example.com/a.png')
+    expect(container.innerHTML).not.toContain('javascript:')
+  })
+
   it('does not preserve a control-character-obfuscated external href as a file link', () => {
     const obfuscatedHref = '\u0001//attacker.example/path'
     const { container } = render(
